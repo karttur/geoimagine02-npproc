@@ -10,6 +10,8 @@ from sys import exit
 
 import numpy as np
 
+import gc
+
 #from numpy import pi, log, tan, empty, float32, arctan, rad2deg, gradient
 
 from scipy.ndimage import gaussian_gradient_magnitude
@@ -327,12 +329,22 @@ class ProcessNumpy(Filter):
                 if self.pp.process.parameters.mode == 'LandformTPI':
                     
                     break
+                
+                srcLayer.layer.NPBAND = None
+                
+                dstLayer.layer = None
+                
+                dstLayer = None
+            
                               
             srcLayer.layer.NPBAND = None
                 
             srcLayer.layer = None
                 
-            srcLayer = None   
+            srcLayer = None
+            
+            # Collect the garbage
+            gc.collect()   
     
     def _LoopSingleStaticSrcLayer(self,srcLocus):
         '''
@@ -451,6 +463,10 @@ class ProcessNumpy(Filter):
         # this is TPI (spot height – average neighbourhood height)
         TPI = BAND - mx_temp / mx_count
         
+        mx_temp = None
+        
+        mx_count = None
+        
         return (TPI)
    
     def _SmoothBand(self, BAND, radius):
@@ -486,7 +502,17 @@ class ProcessNumpy(Filter):
 
         # return the smoothed average
         
-        return mx_temp / mx_count
+        mx_arr = mx_temp / mx_count
+        
+        # Delete and garbage collect
+        
+        del mx_temp
+        
+        del mx_count
+        
+        gc.collect()
+         
+        return mx_arr
 
     def _IniTPILFfromDEM(self, srcLayer, dstLayerFPN, dstDict):
         ''' TPI landform from DEM 
@@ -749,6 +775,9 @@ class ProcessNumpy(Filter):
                 self.srcLayerD[layer].layer = None
                 
                 self.srcLayerD[layer] = None
+                
+            # collect the garbage
+            gc.collect()
           
             #Set the np array as the band
             dstLayer.layer.NPBAND = dstArr
